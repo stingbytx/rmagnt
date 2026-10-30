@@ -12,7 +12,7 @@
   const LS_SETTINGS = 'remy.settings.v1';
   const LS_HISTORY = 'remy.history.v1';
   const SS_TOKEN = 'remy.apptoken.v1';
-  const MAX_TURNS_CONTEXT = 14;
+  const MAX_TURNS_CONTEXT = 10;
   const MAX_HISTORY = 40;
   const VAD_THRESHOLD = 0.062;
   const VAD_FRAMES = 3;
@@ -22,6 +22,8 @@
      is not entitled to them. Any 404 falls back to this one. */
   const DEFAULT_MODEL = 'openai/gpt-oss-20b';
   const FALLBACK_MODEL = 'openai/gpt-oss-20b';
+  let REASONING_DISABLED = false;
+  try { REASONING_DISABLED = sessionStorage.getItem('remy.noReasoningHint') === '1'; } catch (e) {}
 
   /* Public runtime config (config.js). Committed on purpose: it carries the
      Worker URL only — never the NVIDIA key, which stays in Cloudflare. */
@@ -273,9 +275,15 @@
         model: model || settings.model,
         messages,
         temperature: Number(settings.temperature) || 0.6,
-        max_tokens: Number(settings.maxTokens) || 420,
+        max_tokens: Number(settings.maxTokens) || 900,
         stream: true
       };
+      // gpt-oss reasons before answering; ask for the shortest reasoning.
+      // The Worker must forward these (see worker.js) or they are harmless.
+      if (!REASONING_DISABLED && /gpt-oss|reasoning|thinking/i.test(body.model)) {
+        body.reasoning_effort = 'low';
+        body.chat_template_kwargs = { reasoning_effort: 'low' };
+      }
 
       let res;
       try {
@@ -288,6 +296,22 @@
       } catch (e) {
         if (e.name === 'AbortError') throw e;
         throw ProviderError('Network error', 'network', 0, 'Could not reach ' + base);
+      }
+
+      if (!res.ok && (res.status === 400 || res.status === 422) && body.reasoning_effort) {
+        // This endpoint does not understand the hint — retry clean and stop sending it.
+        REASONING_DISABLED = true;
+        try { sessionStorage.setItem('remy.noReasoningHint', '1'); } catch (e) {}
+        delete body.reasoning_effort;
+        delete body.chat_template_kwargs;
+        try {
+          res = await fetch(base + '/chat/completions', {
+            method: 'POST', headers: this.headers(), body: JSON.stringify(body), signal
+          });
+        } catch (e2) {
+          if (e2.name === 'AbortError') throw e2;
+          throw ProviderError('Network error', 'network', 0, 'Could not reach ' + base);
+        }
       }
 
       if (!res.ok) {
@@ -777,6 +801,7 @@
       const chipLabels = { idle: 'Offline', connecting: 'Connecting', listening: 'Listening', processing: 'Thinking', speaking: 'Speaking', interrupted: 'Interrupted', reconnecting: 'Reconnecting', error: 'Error' };
       this.els.chipText.textContent = textListening ? 'Chat' : (chipLabels[state] || state);
       this.els.footTurns.textContent = textListening ? 'text' : state;
+      this.tickThinking(state);
 
       const live = state === STATE.LISTENING || state === STATE.SPEAKING || state === STATE.PROCESSING || state === STATE.INTERRUPTED;
       this.els.micBtn.dataset.live = String(live);
@@ -791,6 +816,19 @@
 
       if (state === STATE.LISTENING && prev !== STATE.LISTENING) this.startTimer();
       if (state === STATE.IDLE) this.stopTimer();
+    },
+
+    /* Show elapsed time while waiting, so a reasoning model doesn't look frozen. */
+    tickThinking(state) {
+      clearInterval(this.thinkTimer);
+      this.thinkTimer = null;
+      if (state !== STATE.PROCESSING && state !== STATE.CONNECTING && state !== STATE.RECONNECTING) return;
+      const base = this.els.statusSub.textContent;
+      const t0 = Date.now();
+      this.thinkTimer = setInterval(() => {
+        const secs = Math.floor((Date.now() - t0) / 1000);
+        if (secs >= 1) this.els.statusSub.textContent = base + ' · ' + secs + 's';
+      }, 400);
     },
 
     pulseOrb() {
