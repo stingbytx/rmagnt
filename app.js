@@ -96,7 +96,7 @@
   ];
 
   const DEFAULT_PROMPT =
-    'You are {name}, a real-time voice assistant. You speak, and your words are read aloud by a speech engine, so write the way a thoughtful person talks.\n\n' +
+    'You are {name}, a real-time voice assistant developed by dotcomAI. You speak, and your words are read aloud by a speech engine, so write the way a thoughtful person talks.\n\n' +
     'Rules for every reply:\n' +
     '- Be warm, direct and natural. No filler, no corporate tone.\n' +
     '- Keep it short: one to three spoken sentences unless the user asks for depth.\n' +
@@ -105,7 +105,6 @@
     '- Ask one clarifying question when the request is ambiguous.\n' +
     '- If you are unsure or lack information, say so plainly and suggest the next step.\n' +
     '- Never claim you performed an action you did not perform.\n' +
-    '- You have no tools: do not offer to set reminders, control devices, play media, browse, or send messages.\n' +
     '- Do not repeat a greeting after the first turn, and do not restate what the user just said.';
 
   /* ---------- helpers ---------- */
@@ -143,7 +142,7 @@
 
   /* ---------- settings ---------- */
   const DEFAULTS = {
-    agentName: 'Remy',
+    agentName: String(CONFIG.agentName || 'Remy'),
     systemPrompt: DEFAULT_PROMPT,
     style: 'concise',
     language: 'en-US',
@@ -174,6 +173,15 @@
     }
     if (settings.model === 'nvidia/llama-3.1-nemotron-70b-instruct') {
       settings.model = DEFAULT_MODEL;
+      changed = true;
+    }
+    // Name and instructions are fixed by the deployment, not editable in the UI.
+    if (settings.agentName !== DEFAULTS.agentName) {
+      settings.agentName = DEFAULTS.agentName;
+      changed = true;
+    }
+    if (settings.systemPrompt !== DEFAULT_PROMPT) {
+      settings.systemPrompt = DEFAULT_PROMPT;
       changed = true;
     }
     if (changed) {
@@ -213,7 +221,6 @@
       .split('{{name}}').join(settings.agentName || 'Remy');
     return (
       base + '\n\n' +
-      'Your name is ' + (settings.agentName || 'Remy') + '. ' +
       style + ' ' +
       'Reply in ' + langLabel + ' unless the user clearly speaks another language. ' +
       'This is a live spoken conversation, so never mention formatting, markdown, or that you are an AI language model.'
@@ -1020,6 +1027,10 @@
       $('fModel').value = settings.model || '';
       $('fName').value = settings.agentName || '';
       $('fPrompt').value = settings.systemPrompt || DEFAULT_PROMPT;
+      // Read-only: size the box to the text instead of hiding it behind a scrollbar.
+      const promptBox = $('fPrompt');
+      promptBox.style.height = 'auto';
+      promptBox.style.height = Math.min(promptBox.scrollHeight + 2, 520) + 'px';
       $('fStyle').value = settings.style;
       $('fLang').value = settings.language;
       $('fRate').value = settings.ttsRate;
@@ -1694,8 +1705,8 @@
       toast(appToken ? 'App token saved for this tab only.' : 'App token cleared.', 'ok');
     });
     $('fModel').addEventListener('change', (e) => commit(() => { settings.model = e.target.value.trim(); }));
-    $('fName').addEventListener('change', (e) => commit(() => { settings.agentName = e.target.value.trim() || 'Remy'; UI.fillVoices(); }));
-    $('fPrompt').addEventListener('change', (e) => commit(() => { settings.systemPrompt = e.target.value; }));
+
+
     $('fStyle').addEventListener('change', (e) => commit(() => { settings.style = e.target.value; }));
     $('fLang').addEventListener('change', (e) => commit(() => { settings.language = e.target.value; }));
     $('fInput').addEventListener('change', (e) => commit(() => { settings.inputDeviceId = e.target.value; }));
@@ -1723,12 +1734,15 @@
     $('fAutoSpeak').addEventListener('change', (e) => commit(() => { settings.autoSpeak = e.target.checked; }));
     $('fBargeIn').addEventListener('change', (e) => commit(() => { settings.bargeIn = e.target.checked; }));
 
-    $('resetPromptBtn').addEventListener('click', () => {
-      settings.systemPrompt = DEFAULT_PROMPT;
-      $('fPrompt').value = DEFAULT_PROMPT;
-      saveSettings();
-      toast('System prompt reset to the default.', 'ok');
-    });
+    const resetBtn = $('resetPromptBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        settings.systemPrompt = DEFAULT_PROMPT;
+        $('fPrompt').value = DEFAULT_PROMPT;
+        saveSettings();
+        toast('System prompt reset to the default.', 'ok');
+      });
+    }
 
     $('voiceTestBtn').addEventListener('click', async () => {
       if (!('speechSynthesis' in window)) {

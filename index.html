@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <!-- Primary SEO -->
-<title>Remy Agent – Chat With Free Real-Time AI Voice Chat Assistant</title>
+<title>Remy Agent – Free Real-Time AI Voice Chat Assistant</title>
 <meta name="description" content="Talk naturally with AI using Remy Agent. Experience real-time voice conversations, multilingual support, and multiple AI models in one voice chat assistant." />
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
 <link rel="canonical" href="https://chat.remyagent.cc/" />
@@ -13,8 +13,6 @@
 <meta name="application-name" content="Remy Agent" />
 <meta name="theme-color" content="#F4F3F0" />
 <meta name="color-scheme" content="light" />
-  <meta name="keywords" content="remy, remyai,remy ai, remy voice assisstant, dotcomai, dotcom ai, remy by dotcomai, remy agent,remyagent, manuja damsara">
-
 
 <!-- Icons -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -569,8 +567,12 @@ body[data-state="idle"] .wave i,body[data-state="error"] .wave i{opacity:.18}
   border-radius:var(--r);font-size:13px;transition:border-color .18s,background .18s;
 }
 .input:hover,.select:hover,.textarea:hover{border-color:rgba(11,11,11,.3)}
+.input[readonly],.textarea[readonly]{background:var(--paper-2);color:var(--ink-soft);cursor:default;border-color:var(--line-soft)}
+.input[readonly]:hover,.textarea[readonly]:hover{border-color:var(--line-soft)}
+.input[readonly]:focus,.textarea[readonly]:focus{background:var(--paper-2);border-color:var(--line-soft);outline:none}
 .input:focus,.select:focus,.textarea:focus{outline:none;border-color:var(--ink);background:#fff}
 .textarea{min-height:110px;resize:vertical;line-height:1.6;font-family:var(--sans)}
+.textarea[readonly]{resize:none;overflow:auto;max-height:520px}
 .select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%);background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .row--split{justify-content:space-between}
@@ -910,7 +912,7 @@ body:not(.is-owner) [data-owner-only]{display:none !important}
       <div class="page-head">
         <div class="kicker">Configuration</div>
         <h1>Settings</h1>
-        <p>Agent personality, audio devices and privacy — saved to this browser.</p>
+        <p>Audio devices, privacy and runtime — saved to this browser. The agent’s name and instructions are fixed.</p>
       </div>
       <div class="grid2">
         <div class="card" id="connectionCard" data-owner-only>
@@ -947,12 +949,12 @@ body:not(.is-owner) [data-owner-only]{display:none !important}
           <h2><span class="num">02</span> Agent</h2>
           <div class="field">
             <label for="fName">Agent name</label>
-            <input class="input" id="fName" type="text" maxlength="40" placeholder="Remy" />
+            <input class="input" id="fName" type="text" maxlength="40" placeholder="Remy" readonly aria-readonly="true" tabindex="-1" />
           </div>
           <div class="field">
             <label for="fPrompt">System instructions</label>
-            <textarea class="textarea" id="fPrompt" rows="7" spellcheck="false"></textarea>
-            <span class="help">Sent as the system message on every turn. Spoken responses are kept short by default.</span>
+            <textarea class="textarea" id="fPrompt" rows="8" spellcheck="false" readonly aria-readonly="true" tabindex="-1"></textarea>
+            <span class="help">Fixed by this deployment and sent as the system message on every turn. Spoken replies stay short by default.</span>
           </div>
           <div class="row">
             <div class="field" style="flex:1;min-width:150px">
@@ -969,7 +971,7 @@ body:not(.is-owner) [data-owner-only]{display:none !important}
             </div>
           </div>
           <div class="row">
-            <button class="btn btn--sm" type="button" id="resetPromptBtn">Reset to default</button>
+            <span class="badge">locked</span>
             <button class="btn btn--sm" type="button" id="voiceTestBtn">Test voice</button>
           </div>
         </div>
@@ -1140,7 +1142,7 @@ body:not(.is-owner) [data-owner-only]{display:none !important}
 
 <!-- Bump ?v= whenever app.js or config.js changes so a long CDN cache
      (Cloudflare Pages uses 4h for .js) cannot pair a new HTML with old JS. -->
-<script src="config.js?v=20261030c"></script>
-<script src="app.js?v=20261030c"></script>
+<script src="config.js?v=20261030d"></script>
+<script src="app.js?v=20261030d"></script>
 </body>
 </html>
