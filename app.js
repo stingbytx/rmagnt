@@ -28,6 +28,23 @@
   })();
   const CONFIG_TOKEN = String(CONFIG.appToken || '').trim();
 
+  /* Owner mode: reveals the Connection card, setup banner and proxy controls.
+     Visitors only ever get the voice/chat surface. Enable with ?owner=1
+     (persists on this browser), disable with ?owner=0. Local dev is owner. */
+  const OWNER_KEY = 'remy.owner.v1';
+  function resolveOwner() {
+    const params = new URLSearchParams(location.search);
+    const flag = params.get('owner');
+    try {
+      if (flag === '0') { localStorage.removeItem(OWNER_KEY); return false; }
+      if (flag === '1') { localStorage.setItem(OWNER_KEY, '1'); return true; }
+      if (localStorage.getItem(OWNER_KEY) === '1') return true;
+    } catch (e) {}
+    const h = location.hostname;
+    return h === 'localhost' || h === '127.0.0.1' || location.protocol === 'file:';
+  }
+  const IS_OWNER = resolveOwner();
+
   const STATE = {
     IDLE: 'idle',
     CONNECTING: 'connecting',
@@ -942,6 +959,16 @@
       } catch (e) {}
     },
 
+    renumberCards() {
+      let n = 0;
+      document.querySelectorAll('#view-settings .card').forEach((card) => {
+        if (!IS_OWNER && card.hasAttribute('data-owner-only')) return;
+        n += 1;
+        const num = card.querySelector('h2 .num');
+        if (num) num.textContent = String(n).padStart(2, '0');
+      });
+    },
+
     syncSettingsForm() {
       $('fProxy').value = settings.proxyUrl || '';
       $('fProxy').placeholder = CONFIG_PROXY || 'https://api.yourdomain.com';
@@ -1108,8 +1135,14 @@
     mode: 'voice',
 
     configProblem() {
-      if (!isConfigured()) return 'No proxy configured yet. Open Settings and add your proxy URL.';
-      if (!settings.model) return 'No model selected. Add a model ID in Settings.';
+      if (!isConfigured()) {
+        return IS_OWNER
+          ? 'No proxy configured yet. Add your Worker URL in config.js or Settings.'
+          : 'The assistant is offline at the moment. Please try again shortly.';
+      }
+      if (!settings.model) {
+        return IS_OWNER ? 'No model selected. Add a model ID in Settings.' : 'The assistant is offline at the moment.';
+      }
       return '';
     },
 
@@ -1127,8 +1160,8 @@
       const problem = this.configProblem();
       if (problem) {
         UI.setState(STATE.ERROR, problem);
-        UI.showAlert('Setup required', problem);
-        toast('Add your proxy URL in Settings to start.', 'err');
+        UI.showAlert(IS_OWNER ? 'Setup required' : 'Assistant offline', problem);
+        if (IS_OWNER) toast('Add your proxy URL in Settings to start.', 'err');
         return false;
       }
       if (!this.createdAt) {
@@ -1169,10 +1202,12 @@
       const problem = this.configProblem();
       if (problem) {
         UI.setState(STATE.ERROR, problem);
-        UI.showAlert('Setup required', problem);
-        UI.els.setup.dataset.open = 'true';
-        toast('Add your proxy URL in Settings to start.', 'err');
-        location.hash = '#/settings';
+        UI.showAlert(IS_OWNER ? 'Setup required' : 'Assistant offline', problem);
+        if (IS_OWNER) UI.els.setup.dataset.open = 'true';
+        if (IS_OWNER) {
+          toast('Add your proxy URL in Settings to start.', 'err');
+          location.hash = '#/settings';
+        }
         return;
       }
       if (!STT.supported()) {
@@ -1523,7 +1558,7 @@
     if (footTts) footTts.textContent = 'tts ' + ('speechSynthesis' in window ? 'browser' : 'unsupported');
 
     const setup = $('setupBanner');
-    if (setup) setup.dataset.open = String(!base);
+    if (setup && IS_OWNER) setup.dataset.open = String(!base);
   }
 
 
@@ -1779,6 +1814,8 @@
   function boot() {
     $('year').textContent = String(new Date().getFullYear());
     UI.init();
+    if (IS_OWNER) document.body.classList.add('is-owner');
+    UI.renumberCards();
     bindSettings();
     bindControls();
     TTS.load();
@@ -1788,7 +1825,7 @@
     syncRuntimePanel();
     UI.updateCount();
     UI.setState(STATE.IDLE, 'Microphone is off.');
-    if (!isConfigured()) $('setupBanner').dataset.open = 'true';
+    if (!isConfigured() && IS_OWNER) $('setupBanner').dataset.open = 'true';
 
     if (!STT.supported()) {
       const note = $('rtNote');

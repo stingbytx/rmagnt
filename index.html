@@ -519,6 +519,9 @@ footer.site .grow{flex:1}
 .setup b{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:2px}
 .setup .btn{margin-left:auto}
 
+/* Owner-only UI (connection card, setup banner). Public visitors never see it. */
+body:not(.is-owner) [data-owner-only]{display:none !important}
+
 .tabbar{display:none}
 
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
@@ -624,7 +627,7 @@ footer.site .grow{flex:1}
 
   <main class="view is-active" id="view-app">
     <div class="wrap">
-      <div class="setup" id="setupBanner">
+      <div class="setup" id="setupBanner" data-owner-only>
         <div>
           <b>Setup required</b>
           Set your Worker URL in <code style="font-family:var(--mono);font-size:11px">config.js</code> (or here) to start talking. The NVIDIA key stays in Cloudflare — it is never part of this site.
@@ -786,7 +789,7 @@ footer.site .grow{flex:1}
         <p>Connection, agent personality, audio devices and privacy — saved to this browser.</p>
       </div>
       <div class="grid2">
-        <div class="card">
+        <div class="card" id="connectionCard" data-owner-only>
           <h2><span class="num">01</span> Connection</h2>
           <p>This site is static (GitHub Pages), so requests go through your own proxy. The API key lives in the proxy, never in this page.</p>
           <div class="field">
@@ -974,7 +977,7 @@ footer.site .grow{flex:1}
 <footer class="site">
   <span>© <span id="year"></span> Remy Agent</span>
   <span class="dotsep" style="width:3px;height:3px;border-radius:50%;background:var(--line)"></span>
-  <span>NVIDIA Build inference</span>
+  <span>Developed by dotcomAI</span>
   <span class="grow"></span>
   <span id="footVersion">v1.0 · static</span>
 </footer>
