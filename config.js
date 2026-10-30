@@ -21,7 +21,8 @@ window.REMY_CONFIG = {
   // not a secret. Leave empty and rely on Cloudflare WAF if unsure.
   appToken: '',
 
-  // Default model shown on first load. Any chat-completions model
-  // available to your NVIDIA account works.
-  model: 'nvidia/llama-3.1-nemotron-70b-instruct'
+  // Default model shown on first load. Must be one your NVIDIA account is
+  // entitled to — /models lists the whole catalog, but most entries 404.
+  // Verified working here: openai/gpt-oss-20b (~3s per turn).
+  model: 'openai/gpt-oss-20b'
 };

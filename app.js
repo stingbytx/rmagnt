@@ -17,6 +17,12 @@
   const VAD_THRESHOLD = 0.062;
   const VAD_FRAMES = 3;
 
+  /* Models verified against this deployment's NVIDIA account.
+     gpt-oss-20b answers in ~3s; most catalog entries 404 because the account
+     is not entitled to them. Any 404 falls back to this one. */
+  const DEFAULT_MODEL = 'openai/gpt-oss-20b';
+  const FALLBACK_MODEL = 'openai/gpt-oss-20b';
+
   /* Public runtime config (config.js). Committed on purpose: it carries the
      Worker URL only — never the NVIDIA key, which stays in Cloudflare. */
   const CONFIG = (window.REMY_CONFIG && typeof window.REMY_CONFIG === 'object') ? window.REMY_CONFIG : {};
@@ -99,6 +105,7 @@
     '- Ask one clarifying question when the request is ambiguous.\n' +
     '- If you are unsure or lack information, say so plainly and suggest the next step.\n' +
     '- Never claim you performed an action you did not perform.\n' +
+    '- You have no tools: do not offer to set reminders, control devices, play media, browse, or send messages.\n' +
     '- Do not repeat a greeting after the first turn, and do not restate what the user just said.';
 
   /* ---------- helpers ---------- */
@@ -140,14 +147,14 @@
     systemPrompt: DEFAULT_PROMPT,
     style: 'concise',
     language: 'en-US',
-    model: String(CONFIG.model || 'nvidia/llama-3.1-nemotron-70b-instruct'),
+    model: String(CONFIG.model || DEFAULT_MODEL),
     proxyUrl: '',
     inputDeviceId: '',
     outputVoice: '',
     ttsRate: 1,
     ttsPitch: 1,
     temperature: 0.6,
-    maxTokens: 420,
+    maxTokens: 900,
     showTranscript: true,
     storeHistory: true,
     autoSpeak: true,
@@ -155,6 +162,24 @@
   };
 
   let settings = Object.assign({}, DEFAULTS, readJSON(LS_SETTINGS, {}));
+
+  /* Migrate settings saved by older builds:
+     - 420 tokens truncated answers from reasoning models before they spoke.
+     - the old default model is no longer entitled on this account. */
+  (function migrateSettings() {
+    let changed = false;
+    if (!Number(settings.maxTokens) || Number(settings.maxTokens) < 700) {
+      settings.maxTokens = 900;
+      changed = true;
+    }
+    if (settings.model === 'nvidia/llama-3.1-nemotron-70b-instruct') {
+      settings.model = DEFAULT_MODEL;
+      changed = true;
+    }
+    if (changed) {
+      try { localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); } catch (e) {}
+    }
+  })();
   let appToken = '';
   try { appToken = sessionStorage.getItem(SS_TOKEN) || CONFIG_TOKEN; } catch (e) { appToken = CONFIG_TOKEN; }
 
@@ -209,7 +234,7 @@
     forbidden: ['Access denied', 'This account or model is not enabled for your API key. Try another model ID.'],
     quota: ['Quota exhausted', 'Your NVIDIA credits or free-tier quota are used up for now.'],
     rate: ['Rate limited', 'Too many requests. Wait a moment, then retry.'],
-    model: ['Model unavailable', 'That model ID was not found. Fetch the model list and pick another.'],
+    model: ['Model unavailable', 'That model is not enabled for this account. Choosing another model usually fixes it.'],
     upstream: ['Provider error', 'The model endpoint returned an error. Retrying usually works.'],
     network: ['Network unreachable', 'The request did not reach your proxy. Check the URL, CORS, and your connection.'],
     config: ['Not configured', 'Add your proxy URL in Settings first — the API key must stay server-side.'],
@@ -222,7 +247,9 @@
 
   function describeError(err) {
     const copy = ERROR_COPY[err && err.code] || ['Something went wrong', (err && err.message) || 'Unexpected error.'];
-    return { title: copy[0], message: copy[1], detail: (err && err.detail) || '' };
+    // Provider payloads can contain account/function identifiers; owners only.
+    const detail = (IS_OWNER && err && err.detail) ? String(err.detail).slice(0, 200) : '';
+    return { title: copy[0], message: copy[1], detail: detail };
   }
 
   const Provider = {
@@ -232,11 +259,11 @@
       return h;
     },
 
-    async chat({ messages, signal, onDelta, onStatus }) {
+    async chat({ messages, signal, onDelta, onStatus, model }) {
       const base = apiBase();
       if (!base) throw ProviderError('No proxy configured', 'config');
       const body = {
-        model: settings.model,
+        model: model || settings.model,
         messages,
         temperature: Number(settings.temperature) || 0.6,
         max_tokens: Number(settings.maxTokens) || 420,
@@ -306,7 +333,9 @@
           try {
             const json = JSON.parse(chunk);
             const delta = json.choices && json.choices[0] && json.choices[0].delta;
-            const piece = (delta && (delta.content || delta.reasoning_content)) || '';
+            // Reasoning models stream `reasoning_content` before the answer.
+            // Never show or store that internal monologue.
+            const piece = (delta && delta.content) || '';
             if (piece) {
               full += piece;
               onDelta(piece, full);
@@ -1279,10 +1308,13 @@
       const clean = String(text || '').trim();
       if (!clean || this.busy) return;
       if (this.state !== STATE.LISTENING) return;
+      const nowMs = Date.now();
+      if (clean === this.lastUserText && nowMs - (this.lastUserAt || 0) < 1500) return;
       this.busy = true;
       STT.stop();
       STT.hideLive();
       this.lastUserText = clean;
+      this.lastUserAt = nowMs;
       this.messages.push({ role: 'user', content: clean, ts: now() });
       UI.addMessage('user', clean);
       UI.updateCount();
@@ -1297,12 +1329,13 @@
       let acc = '';
       let firstToken = true;
 
-      const call = async () => {
+      const call = async (modelId) => {
         const context = this.messages
           .filter((m) => m.role !== 'system')
           .slice(-MAX_TURNS_CONTEXT)
           .map((m) => ({ role: m.role === 'agent' ? 'assistant' : m.role, content: m.content }));
         return Provider.chat({
+          model: modelId,
           messages: [{ role: 'system', content: composeSystemPrompt() }].concat(context),
           signal: this.abort.signal,
           onDelta: (piece, full) => {
@@ -1318,8 +1351,22 @@
         });
       };
 
+      let modelUsed = settings.model;
+
       try {
-        acc = await call();
+        try {
+          acc = await call(modelUsed);
+        } catch (e) {
+          // Not entitled to that model? Fall back once to a verified one.
+          if (e.code === 'model' && modelUsed !== FALLBACK_MODEL) {
+            modelUsed = FALLBACK_MODEL;
+            UI.setState(STATE.PROCESSING, 'That model is not enabled — retrying with ' + FALLBACK_MODEL.split('/').pop() + '…');
+            toast('Model not enabled for this account — switched to ' + FALLBACK_MODEL + '.', 'err');
+            acc = await call(modelUsed);
+          } else {
+            throw e;
+          }
+        }
       } catch (e) {
         if (e.name === 'AbortError') { this.busy = false; return; }
         if (this.retries < 2 && (e.code === 'network' || e.code === 'upstream' || e.code === 'timeout' || e.code === 'rate')) {
@@ -1327,7 +1374,7 @@
           UI.setState(STATE.RECONNECTING, 'Retry ' + this.retries + ' of 2 — ' + (ERROR_COPY[e.code] ? ERROR_COPY[e.code][0] : 'temporary failure'));
           try {
             await sleep(600 * this.retries);
-            acc = await call();
+            acc = await call(modelUsed);
           } catch (e2) {
             this.busy = false;
             agent.el.remove();
@@ -1348,12 +1395,15 @@
       if (!reply) {
         agent.el.remove();
         this.busy = false;
-        UI.setState(STATE.ERROR, 'The model returned an empty reply.');
-        UI.showAlert('Empty response', 'The model sent nothing back. Retry, or pick another model ID.');
+        UI.setState(STATE.ERROR, 'The model returned no answer.');
+        UI.showAlert('Empty answer', 'The model used its budget without producing an answer. Retry, or choose another model.');
+        this.errorPhase = 'turn';
         return;
       }
 
       this.messages.push({ role: 'agent', content: reply, ts: now() });
+      const footModel = $('footModel');
+      if (footModel) footModel.textContent = 'model ' + modelUsed.split('/').slice(-1)[0];
       UI.updateCount();
       this.retries = 0;
 

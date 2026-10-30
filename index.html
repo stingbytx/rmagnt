@@ -927,11 +927,11 @@ body:not(.is-owner) [data-owner-only]{display:none !important}
           <div class="field">
             <label for="fModel">Model ID</label>
             <div class="row">
-              <input class="input" id="fModel" list="modelList" placeholder="nvidia/llama-3.1-nemotron-70b-instruct" style="flex:1;min-width:180px" />
+              <input class="input" id="fModel" list="modelList" placeholder="openai/gpt-oss-20b" style="flex:1;min-width:180px" />
               <button class="btn btn--sm" type="button" id="fetchModelsBtn">Fetch list</button>
             </div>
             <datalist id="modelList"></datalist>
-            <span class="help">Any chat-completions model available to your NVIDIA account. The row below shows what the proxy reports.</span>
+            <span class="help">Only models your NVIDIA account is entitled to will run — the catalog lists far more than it allows. <code class="inline">openai/gpt-oss-20b</code> is verified working here (~3s per turn); if a model 404s the app retries once with it automatically.</span>
           </div>
           <div class="row">
             <button class="btn btn--sm" type="button" id="testConnBtn">Test connection</button>
@@ -1136,7 +1136,9 @@ body:not(.is-owner) [data-owner-only]{display:none !important}
   <span id="footVersion">v1.0 · static</span>
 </footer>
 
-<script src="config.js"></script>
-<script src="app.js"></script>
+<!-- Bump ?v= whenever app.js or config.js changes so a long CDN cache
+     (Cloudflare Pages uses 4h for .js) cannot pair a new HTML with old JS. -->
+<script src="config.js?v=20261030c"></script>
+<script src="app.js?v=20261030c"></script>
 </body>
 </html>
