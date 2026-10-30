@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>REMY AGENT — Real-Time Voice Interface</title>
+<meta name="description" content="REMY AGENT — a real-time voice interface for NVIDIA-hosted models. Speak, listen, interrupt." />
+<meta name="theme-color" content="#F4F3F0" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0B0B'/%3E%3Crect x='8' y='8' width='16' height='16' rx='5' fill='none' stroke='%23FF3E8A' stroke-width='2'/%3E%3Ccircle cx='13' cy='16' r='1.8' fill='%23F4F3F0'/%3E%3Ccircle cx='19' cy='16' r='1.8' fill='%23F4F3F0'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   REMY AGENT — design tokens (extracted from brand reference)
+   paper white / hairline grid / tiny mono caps / one gradient accent
+   ============================================================ */
+:root{
+  --paper:#F4F3F0;
+  --paper-2:#EDEBE7;
+  --paper-3:#E4E2DC;
+  --ink:#0B0B0B;
+  --ink-soft:#3A3935;
+  --muted:#75736D;
+  --line:rgba(11,11,11,.16);
+  --line-soft:rgba(11,11,11,.075);
+  --pink:#FF3E8A;
+  --orange:#FF8A3C;
+  --amber:#FFC14D;
+  --green:#1F9D6B;
+  --red:#D93A3A;
+  --grad:linear-gradient(135deg,#FFB347 0%,#FF8A3C 28%,#FF3E8A 68%,#E22C9B 100%);
+  --grad-soft:linear-gradient(135deg,rgba(255,179,71,.14),rgba(255,62,138,.14));
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --serif:"Instrument Serif","Times New Roman",Georgia,serif;
+  --bar:78px;
+  --pad:clamp(16px,3vw,40px);
+  --r:2px;
+  --shadow:0 1px 0 rgba(11,11,11,.04), 0 12px 40px -24px rgba(11,11,11,.35);
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+::selection{background:rgba(255,62,138,.22)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,h4,p{margin:0}
+:focus-visible{outline:2px solid var(--pink);outline-offset:3px;border-radius:1px}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+}
+
+/* ---------- shell ---------- */
+.app{min-height:100dvh;display:flex;flex-direction:column}
+.topbar{
+  position:sticky;top:0;z-index:60;
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;
+  height:var(--bar);padding:0 var(--pad);
+  background:rgba(244,243,240,.86);
+  backdrop-filter:saturate(1.2) blur(14px);
+  -webkit-backdrop-filter:saturate(1.2) blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+.brand .glyph{width:16px;height:16px;border:1.5px solid var(--ink);border-radius:5px;display:grid;place-items:center;position:relative;flex:none}
+.brand .glyph::before,.brand .glyph::after{content:"";width:2px;height:2px;background:var(--ink);border-radius:50%;position:absolute;top:50%;transform:translateY(-50%)}
+.brand .glyph::before{left:4px}.brand .glyph::after{right:4px}
+.brand:hover .glyph{border-color:var(--pink)}
+.nav{display:flex;align-items:center;gap:clamp(10px,2vw,26px);justify-content:flex-start;min-width:0;overflow:hidden}
+.nav a{
+  font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--muted);padding:6px 2px;position:relative;white-space:nowrap;transition:color .2s var(--ease)
+}
+.nav a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--ink);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
+.nav a:hover{color:var(--ink)}
+.nav a:hover::after,.nav a[aria-current="page"]::after{transform:scaleX(1)}
+.nav a[aria-current="page"]{color:var(--ink)}
+.nav a.nav-home{color:var(--ink)}
+.nav a.nav-home::after{background:var(--grad);height:1.5px}
+.top-actions{display:flex;align-items:center;gap:12px;margin-left:auto}
+.chip-live{
+  display:none;align-items:center;gap:7px;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);padding:7px 10px;border:1px solid var(--line);background:var(--paper)
+}
+.chip-live .led{width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none}
+.chip-live[data-state="listening"] .led{background:var(--green);animation:led 1.4s infinite}
+.chip-live[data-state="processing"] .led{background:var(--amber);animation:led 1s infinite}
+.chip-live[data-state="speaking"] .led{background:var(--pink);animation:led .9s infinite}
+.chip-live[data-state="error"] .led{background:var(--red)}
+@keyframes led{0%,100%{opacity:1}50%{opacity:.25}}
+
+.btn{
+  display:inline-flex;align-items:center;gap:9px;justify-content:center;
+  font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.13em;text-transform:uppercase;
+  padding:11px 16px;border:1px solid var(--ink);background:var(--paper);color:var(--ink);
+  transition:background .18s var(--ease),color .18s var(--ease),transform .18s var(--ease),box-shadow .18s var(--ease);
+  position:relative;white-space:nowrap;border-radius:var(--r)
+}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn:active{transform:translateY(1px)}
+.btn--ink{background:var(--ink);color:var(--paper);box-shadow:4px 4px 0 -1px var(--paper),4px 4px 0 0 var(--pink)}
+.btn--ink:hover{background:#1d1d1b;color:var(--paper);box-shadow:5px 5px 0 -1px var(--paper),5px 5px 0 0 var(--orange)}
+.btn--grad{border:0;background:var(--grad);color:#1a0d05;font-weight:600}
+.btn--grad:hover{filter:brightness(1.04);color:#1a0d05}
+.btn--ghost{border-color:var(--line);color:var(--ink-soft)}
+.btn--ghost:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn--sm{padding:8px 12px;font-size:9.5px}
+.btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
+
+.lede{color:var(--muted);font-size:14px;max-width:44ch;line-height:1.62}
+
+/* ---------- ticker strip ---------- */
+.strip{
+  display:flex;align-items:center;gap:14px;height:30px;padding:0 var(--pad);
+  border-bottom:1px solid var(--line-soft);background:var(--paper-2);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  overflow:hidden;
+}
+.strip b{color:var(--ink);font-weight:600}
+.strip .sep{opacity:.4}
+.strip .pulse{width:5px;height:5px;border-radius:50%;background:var(--pink);flex:none;animation:led 2.4s infinite}
+.strip .route{margin-left:auto;color:var(--muted);white-space:nowrap;opacity:.85}
+.strip .strip-msg{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+/* ---------- views ---------- */
+.view{flex:1;display:none;min-height:0}
+.view.is-active{display:block}
+.wrap{padding:clamp(18px,3.4vw,44px) var(--pad) clamp(28px,5vw,64px);max-width:1560px;margin:0 auto}
+
+/* ---------- voice grid (stage + transcript) ---------- */
+.voice-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(14px,1.6vw,20px);align-items:start}
+@media (min-width:1200px){
+  .voice-grid{grid-template-columns:minmax(0,1fr) minmax(320px,372px)}
+}
+
+/* ---------- stage (main app) ---------- */
+.stage{
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(260px,1fr) minmax(320px,1.15fr);
+  grid-template-areas:"head orb" "controls orb" "foot foot";
+  align-content:start;
+  gap:clamp(16px,2.4vw,34px) clamp(20px,3vw,48px);
+  padding:clamp(22px,3.2vw,44px);
+  border:1px solid var(--line);
+  background:
+    linear-gradient(var(--paper),var(--paper));
+  overflow:hidden;
+}
+.stage::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(to right,var(--line-soft) 1px,transparent 1px),
+    linear-gradient(to bottom,var(--line-soft) 1px,transparent 1px);
+  background-size:25% 100%,100% 33.33%;
+  opacity:.9;
+}
+.stage > *{position:relative;z-index:1}
+.stage-head{grid-area:head;align-self:start}
+.eyebrow{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:clamp(12px,2vw,20px)}
+.eyebrow .dot{width:9px;height:9px;border-radius:50%;background:var(--grad);flex:none;box-shadow:0 0 0 3px rgba(255,62,138,.1)}
+.display{
+  font-family:var(--serif);font-weight:400;line-height:.96;letter-spacing:-.015em;
+  font-size:clamp(40px,5.4vw,74px);display:flex;flex-direction:column;gap:2px;
+}
+.display .mark{position:relative;display:inline-block;padding:0 .06em;width:max-content;max-width:100%}
+.display .mark::before{content:"";position:absolute;inset:-.06em -.02em -.02em -.02em;border:1px solid var(--pink);opacity:.55;z-index:-1;transform:translate(6px,4px)}
+.display .mark:nth-child(2)::before{border-color:var(--orange);transform:translate(-6px,4px)}
+.stage-head .lede{margin-top:clamp(16px,2.4vw,26px)}
+.hint-mono{margin-top:18px;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 14px}
+.hint-mono kbd{border:1px solid var(--line);padding:1px 5px;font-family:var(--mono);font-size:9px;border-bottom-width:2px}
+
+/* orb */
+.orb-col{grid-area:orb;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,2vw,22px);min-height:clamp(330px,44vh,520px)}
+.orb-stage{position:relative;width:clamp(220px,25vw,310px);aspect-ratio:1;display:grid;place-items:center;--level:0;--scale:1}
+.orb-stage .rings{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.orb-stage .rings i{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  border:1px solid var(--line);border-radius:50%;
+  width:calc(100% + var(--k,0px));aspect-ratio:1;transition:transform .35s var(--ease),border-color .4s;
+}
+.orb-stage .rings i:nth-child(1){--k:34px}
+.orb-stage .rings i:nth-child(2){--k:-34px;border-style:dashed;opacity:.7}
+.orb-stage .rings i:nth-child(3){--k:78px;opacity:.35}
+.orb-stage .ticks{position:absolute;inset:-9%;opacity:.5;animation:spin 44s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.orb{
+  position:relative;width:74%;aspect-ratio:1;border-radius:34%;
+  background:
+    radial-gradient(80% 70% at 28% 18%,#FFE29A 0%,#FFB347 26%,#FF7A3D 52%,#FF3E8A 78%,#D4278C 100%);
+  box-shadow:
+    inset 0 -10px 26px rgba(120,0,60,.22),
+    inset 0 8px 22px rgba(255,255,255,.35),
+    0 30px 70px -30px rgba(255,62,138,.55),
+    0 0 calc(30px + 90px * var(--level)) -10px rgba(255,110,80,calc(.18 + .5 * var(--level)));
+  transform:scale(calc(1 + .035 * var(--level)));
+  transition:transform .12s linear,box-shadow .2s linear,border-radius .5s var(--ease);
+  display:grid;place-items:center;
+  animation:breathe 7s ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{border-radius:34% 34% 34% 34%}50%{border-radius:38% 30% 38% 30%}}
+.orb::after{ /* glossy highlight */
+  content:"";position:absolute;inset:6% 8% 55% 8%;border-radius:40% 40% 50% 50%;
+  background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0));
+  filter:blur(6px);pointer-events:none;
+}
+.face{
+  position:relative;width:62%;aspect-ratio:1.02;border-radius:26%;
+  background:radial-gradient(120% 120% at 50% 30%,#16151a,#08080a 70%);
+  display:grid;place-items:center;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), inset 0 10px 30px rgba(0,0,0,.6);
+  overflow:hidden;
+  transform:scale(calc(1 + .035 * var(--level,0)));
+  transition:transform .1s linear,border-radius .5s var(--ease);
+}
+.face::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.10),transparent 40%);z-index:1;pointer-events:none}
+.face::before{
+  content:"";position:absolute;inset:-14%;z-index:0;pointer-events:none;
+  background:radial-gradient(58% 48% at 50% 62%,rgba(255,62,138,.55),rgba(255,120,70,.18) 55%,transparent 72%);
+  filter:blur(12px);
+  opacity:calc(.10 + .55 * var(--level,0));
+  transition:opacity .12s linear,background .5s var(--ease);
+}
+/* eyes rig: .eye carries the pose/expression, i carries blink + pupil scale */
+.eyes{
+  display:flex;gap:24%;align-items:center;justify-content:center;z-index:2;
+  transform:scale(calc(1 + .26 * var(--level,0)));
+  transition:transform .09s linear;
+}
+.eye{display:grid;place-items:center;will-change:transform;transition:transform .28s var(--ease)}
+.eyes i{
+  display:block;width:clamp(7px,1.1vw,10px);aspect-ratio:1;border-radius:50%;background:#F7F5F2;
+  box-shadow:0 0 12px rgba(255,255,255,.55), 0 0 calc(6px + 16px * var(--level,0)) rgba(255,190,190,.75);
+  animation:blink 6.5s infinite;
+  transition:transform .28s var(--ease),width .28s var(--ease),height .28s var(--ease),background .3s,border-radius .3s;
+}
+.eyes i:nth-child(2){animation-delay:.08s}
+@keyframes blink{0%,93.5%,100%{transform:scaleY(1)}95.5%{transform:scaleY(.1)}}
+
+/* ---------- face: listening ---------- */
+.orb-stage[data-state="listening"] .eye:nth-child(1){animation:listenA 4.2s ease-in-out infinite}
+.orb-stage[data-state="listening"] .eye:nth-child(2){animation:listenB 4.2s ease-in-out infinite}
+@keyframes listenA{0%,100%{transform:translate(-.5px,0)}45%{transform:translate(-1.5px,-1px)}70%{transform:translate(.5px,.5px)}}
+@keyframes listenB{0%,100%{transform:translate(.5px,0)}45%{transform:translate(-.5px,.5px)}70%{transform:translate(1.5px,-1px)}}
+
+/* ---------- face: speaking ---------- */
+.orb-stage[data-state="speaking"] .eye:nth-child(1){animation:talkA .58s ease-in-out infinite}
+.orb-stage[data-state="speaking"] .eye:nth-child(2){animation:talkB .58s ease-in-out infinite}
+@keyframes talkA{
+  0%,100%{transform:translateY(0) scale(1)}
+  25%{transform:translateY(-2px) scale(1.12,.9)}
+  55%{transform:translateY(1px) scale(.94,1.08)}
+  80%{transform:translateY(-1px) scale(1.04,.97)}
+}
+@keyframes talkB{
+  0%,100%{transform:translateY(0) scale(1)}
+  30%{transform:translateY(1px) scale(.94,1.08)}
+  60%{transform:translateY(-2px) scale(1.12,.9)}
+  85%{transform:translateY(1px) scale(.98,1.02)}
+}
+.orb-stage[data-state="speaking"] .face::before{background:radial-gradient(58% 48% at 50% 62%,rgba(255,140,60,.5),rgba(255,62,138,.22) 55%,transparent 72%)}
+
+/* state variants */
+.orb-stage[data-state="connecting"] .ticks{animation-duration:2.6s;opacity:1}
+.orb-stage[data-state="connecting"] .orb{animation:pulseRing 1.6s ease-in-out infinite}
+@keyframes pulseRing{0%,100%{opacity:.85}50%{opacity:1;transform:scale(.98)}}
+.orb-stage[data-state="listening"] .rings i{
+  border-color:rgba(255,62,138,.42);
+  transform:translate(-50%,-50%) scale(calc(1 + .14 * var(--level,0)));
+  transition:transform .08s linear,border-color .3s;
+}
+.orb-stage[data-state="listening"] .orb{animation-duration:3.2s}
+.orb-stage[data-state="listening"] .face{box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), inset 0 10px 30px rgba(0,0,0,.55), 0 0 calc(8px + 30px * var(--level,0)) rgba(255,62,138,.35)}
+
+.orb-stage[data-state="processing"] .eye:nth-child(1){animation:thinkA 1.5s ease-in-out infinite}
+.orb-stage[data-state="processing"] .eye:nth-child(2){animation:thinkB 1.5s ease-in-out infinite}
+@keyframes thinkA{0%,100%{transform:translate(-2px,0)}50%{transform:translate(2px,-2px)}}
+@keyframes thinkB{0%,100%{transform:translate(2px,0)}50%{transform:translate(-2px,-2px)}}
+.orb-stage[data-state="processing"] .eyes i{border-radius:45%}
+
+.orb-stage[data-state="speaking"] .ticks{animation-duration:16s}
+.orb-stage[data-state="speaking"] .orb{animation:breathe 1.7s ease-in-out infinite}
+.orb-stage[data-state="speaking"] .rings i{
+  border-color:rgba(255,62,138,.5);
+  animation:speakRipple 2.1s ease-out infinite;
+}
+.orb-stage[data-state="speaking"] .rings i:nth-child(2){animation-delay:.72s}
+.orb-stage[data-state="speaking"] .rings i:nth-child(3){animation-delay:1.44s}
+@keyframes speakRipple{
+  0%{transform:translate(-50%,-50%) scale(.94);opacity:.6}
+  75%{opacity:.1}
+  100%{transform:translate(-50%,-50%) scale(1.13);opacity:0}
+}
+
+.orb-stage[data-state="interrupted"] .orb{filter:saturate(.6)}
+.orb-stage[data-state="interrupted"] .eyes i{background:#FFC14D;animation:none}
+.orb-stage[data-state="interrupted"] .eye{transform:scaleY(.45) translateY(1px)}
+.orb-stage[data-state="error"] .orb{background:radial-gradient(70% 70% at 40% 30%,#FFD6D6,#E2564E 45%,#B42222 100%);animation:none}
+.orb-stage[data-state="error"] .eyes i{width:11px;height:2.5px;border-radius:1px;background:#FFE5E5;animation:none;box-shadow:none}
+.orb-stage[data-state="error"] .eyes{transform:none}
+.orb-stage[data-state="idle"] .orb{filter:saturate(.9)}
+.orb-stage[data-state="idle"] .ticks{opacity:.28;animation-duration:90s}
+
+/* waveform under orb */
+.wave{display:flex;align-items:center;gap:3px;height:30px;opacity:.9;min-width:180px;justify-content:center}
+.wave i{
+  width:2px;background:var(--ink);border-radius:1px;height:3px;
+  transition:height .09s linear,background .3s;
+  opacity:.35;
+}
+body[data-state="listening"] .wave i{background:var(--green);opacity:.9}
+body[data-state="speaking"] .wave i{background:var(--pink);opacity:.85}
+body[data-state="processing"] .wave i{background:var(--amber);opacity:.8}
+body[data-state="idle"] .wave i,body[data-state="error"] .wave i{opacity:.18}
+
+.status{text-align:center;display:flex;flex-direction:column;gap:4px;align-items:center}
+.status-text{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:500}
+.status-sub{font-size:12.5px;color:var(--muted);max-width:34ch}
+.status-sub:empty{display:none}
+
+/* controls */
+.stage-controls{grid-area:controls;display:flex;flex-direction:column;gap:14px;align-self:start}
+.ctrl-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ctrl{
+  display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);
+  background:var(--paper);font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);
+  transition:.18s var(--ease);border-radius:var(--r)
+}
+.ctrl:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.ctrl svg{width:14px;height:14px;flex:none}
+.ctrl[aria-pressed="true"]{border-color:var(--ink);color:var(--ink);background:var(--paper-3)}
+.ctrl[aria-pressed="true"]:hover{background:var(--ink);color:var(--paper)}
+.ctrl--danger:hover{background:var(--red);border-color:var(--red);color:#fff}
+.ctrl[disabled]{opacity:.35;pointer-events:none}
+
+.mic-wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.mic{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  height:56px;padding:0 22px 0 16px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);
+  border-radius:999px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  transition:.2s var(--ease);box-shadow:0 0 0 0 rgba(255,62,138,.35)
+}
+.mic:hover{background:#1c1c1a}
+.mic .ring{width:26px;height:26px;border-radius:50%;background:var(--grad);display:grid;place-items:center;flex:none}
+.mic .ring svg{width:13px;height:13px;color:#160a04}
+.mic[data-live="true"]{background:var(--paper);color:var(--ink)}
+.mic[data-live="true"] .ring{animation:micPulse 1.6s ease-in-out infinite}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,62,138,.45)}50%{box-shadow:0 0 0 8px rgba(255,62,138,0)}}
+.mic:disabled{opacity:.45;pointer-events:none}
+.mic-note{font-family:var(--mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);max-width:26ch;line-height:1.7}
+
+/* composer */
+.composer{
+  display:flex;align-items:center;gap:8px;
+  border:1px solid var(--line);background:var(--paper);padding:4px 4px 4px 12px;
+  transition:border-color .18s,box-shadow .18s;
+}
+.composer:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px rgba(255,62,138,.10)}
+.composer input{
+  flex:1;min-width:0;border:0;background:transparent;padding:10px 0;font-size:13px;color:var(--ink);
+}
+.composer input:focus{outline:none}
+.composer input::placeholder{
+  color:var(--muted);font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+}
+.composer .send{
+  width:36px;height:36px;flex:none;display:grid;place-items:center;border-radius:2px;
+  background:var(--ink);color:var(--paper);transition:.18s var(--ease);
+}
+.composer .send:hover{background:var(--grad);color:#1a0d05}
+.composer .send svg{width:15px;height:15px}
+.composer .send[disabled]{opacity:.35;pointer-events:none}
+.composer-hint{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:-6px 0 0 2px}
+
+/* alert */
+.alert{
+  display:none;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--red);
+  background:#FBF0EE;color:#7A1C14;font-size:12.5px;line-height:1.5;border-radius:var(--r)
+}
+.alert[data-open="true"]{display:flex}
+.alert strong{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;display:block;margin-bottom:3px}
+.alert .retry{margin-left:auto;flex:none}
+.alert code{font-family:var(--mono);font-size:11px;background:rgba(217,58,58,.08);padding:1px 4px;border-radius:2px}
+
+.stage-foot{grid-area:foot;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line-soft);font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.stage-foot .dotsep{width:3px;height:3px;border-radius:50%;background:var(--line);flex:none}
+.stage-foot .grow{flex:1}
+.stage-foot .scrolltag{display:flex;align-items:center;gap:8px}
+.stage-foot .scrolltag::after{content:"";width:38px;height:1px;background:var(--line)}
+
+/* ---------- transcript panel ---------- */
+.panel{display:flex;flex-direction:column;min-height:0;border:1px solid var(--line);background:var(--paper);position:relative}
+.panel-head{
+  display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-soft);
+  background:var(--paper-2);flex:none;
+}
+.panel-head .count{margin-left:auto;color:var(--muted);letter-spacing:.06em}
+.panel-body{overflow:auto;padding:6px 0;flex:1;min-height:180px;scrollbar-width:thin}
+.panel-foot{flex:none;border-top:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+.side{display:flex;flex-direction:column;gap:12px;min-height:0;height:clamp(360px,calc(100dvh - var(--bar) - 74px),640px);position:sticky;top:calc(var(--bar) + 14px)}
+.side[hidden]{display:none !important}
+.side .panel{flex:1;min-height:0}
+
+.msg{padding:11px 16px 13px;border-bottom:1px solid var(--line-soft);display:grid;gap:4px;animation:msgIn .28s var(--ease)}
+@keyframes msgIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.msg:last-child{border-bottom:0}
+.msg .meta{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.msg .meta .who{color:var(--ink);font-weight:600}
+.msg .meta .swatch{width:6px;height:6px;border-radius:50%;flex:none}
+.msg--user .swatch{background:var(--ink)}
+.msg--agent .swatch{background:var(--pink)}
+.msg--system .swatch{background:var(--amber)}
+.msg .body{font-size:13.5px;line-height:1.6;color:var(--ink-soft);white-space:pre-wrap;word-wrap:break-word}
+.msg--user .body{color:var(--ink)}
+.msg--system .body{color:var(--muted);font-size:12px;font-style:italic}
+.msg .body .cursor{display:inline-block;width:6px;height:13px;background:var(--pink);vertical-align:-2px;animation:led .9s infinite;margin-left:2px}
+.transcript-empty{padding:26px 18px;color:var(--muted);font-size:12.5px;line-height:1.7;display:grid;gap:10px}
+.transcript-empty .k{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* ---------- generic content pages ---------- */
+.page-head{display:grid;gap:14px;margin-bottom:clamp(20px,3vw,34px);max-width:70ch}
+.page-head .kicker{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}
+.page-head .kicker::before{content:"";width:22px;height:1px;background:var(--ink)}
+.page-head h1{font-family:var(--serif);font-weight:400;font-size:clamp(30px,4vw,48px);line-height:1.02;letter-spacing:-.01em}
+.page-head p{color:var(--muted);font-size:14px;max-width:62ch}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(14px,2vw,22px)}
+@media (min-width:760px){.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1560px){.grid2{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.card{border:1px solid var(--line);background:var(--paper);padding:clamp(16px,2vw,24px);display:grid;gap:14px;align-content:start;position:relative}
+.card > h2{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;font-weight:600;display:flex;align-items:center;gap:8px}
+.card > h2 .num{color:var(--muted);font-weight:400}
+.card p{font-size:13px;color:var(--muted);line-height:1.65}
+.card p strong{color:var(--ink);font-weight:500}
+
+.field{display:grid;gap:6px}
+.field > label{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-soft)}
+.field .help{font-size:11.5px;color:var(--muted);line-height:1.5}
+.input,.select,.textarea{
+  width:100%;padding:10px 12px;background:var(--paper);border:1px solid var(--line);
+  border-radius:var(--r);font-size:13px;transition:border-color .18s,background .18s;
+}
+.input:hover,.select:hover,.textarea:hover{border-color:rgba(11,11,11,.3)}
+.input:focus,.select:focus,.textarea:focus{outline:none;border-color:var(--ink);background:#fff}
+.textarea{min-height:110px;resize:vertical;line-height:1.6;font-family:var(--sans)}
+.select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%);background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row--split{justify-content:space-between}
+.switch{display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:2px 0}
+.switch input{appearance:none;width:32px;height:18px;border-radius:999px;background:var(--paper-3);border:1px solid var(--line);position:relative;flex:none;cursor:pointer;transition:.2s;margin-top:1px}
+.switch input::after{content:"";position:absolute;top:1px;left:1px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:.2s var(--ease)}
+.switch input:checked{background:var(--ink);border-color:var(--ink)}
+.switch input:checked::after{transform:translateX(14px);background:var(--grad)}
+.switch .txt{display:grid;gap:1px}
+.switch .txt b{font-size:12.5px;font-weight:500}
+.switch .txt span{font-size:11px;color:var(--muted);line-height:1.45}
+.meter{height:4px;background:var(--paper-3);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;width:0%;background:var(--grad);transition:width .08s linear}
+.note{border-left:2px solid var(--pink);padding:2px 0 2px 12px;font-size:12px;color:var(--muted);line-height:1.6}
+.badge{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 7px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge--ok{border-color:rgba(31,157,107,.5);color:#177954;background:rgba(31,157,107,.06)}
+.badge--warn{border-color:rgba(255,193,77,.6);color:#8a5c00;background:rgba(255,193,77,.1)}
+.badge--err{border-color:rgba(217,58,58,.45);color:#a02424;background:rgba(217,58,58,.06)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12px}
+.kv dt{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+.kv dd{margin:0;color:var(--ink-soft)}
+code.inline{font-family:var(--mono);font-size:11.5px;background:var(--paper-3);padding:1.5px 5px;border-radius:2px;border:1px solid var(--line-soft)}
+
+/* history */
+.hist-list{display:grid;gap:10px}
+.hist{
+  display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;
+  border:1px solid var(--line);padding:14px 16px;background:var(--paper);transition:.18s var(--ease);
+}
+.hist:hover{border-color:var(--ink);background:#fff}
+.hist .t{display:grid;gap:3px;min-width:0}
+.hist .t b{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist .t span{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist .t em{font-family:var(--mono);font-style:normal;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hist .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.empty{font-size:13px;color:var(--muted);padding:26px;border:1px dashed var(--line);text-align:center}
+
+footer.site{border-top:1px solid var(--line);padding:16px var(--pad);display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+footer.site .grow{flex:1}
+
+.toast-host{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:200;display:grid;gap:8px;width:min(92vw,420px)}
+.toast{
+  border:1px solid var(--ink);background:var(--ink);color:var(--paper);padding:10px 14px;font-size:12px;
+  display:flex;gap:10px;align-items:center;animation:toastIn .25s var(--ease);line-height:1.45
+}
+.toast--err{background:#7A1C14;border-color:#7A1C14;color:#FFF3F0}
+.toast--ok{background:#0F5138;border-color:#0F5138;color:#ECFFF6}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* setup banner */
+.setup{
+  display:none;gap:14px;align-items:center;flex-wrap:wrap;
+  padding:13px 16px;border:1px solid rgba(255,62,138,.35);background:var(--grad-soft);
+  font-size:12.5px;line-height:1.5;margin-bottom:16px;
+}
+.setup[data-open="true"]{display:flex}
+.setup b{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:2px}
+.setup .btn{margin-left:auto}
+
+.tabbar{display:none}
+
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ---------- responsive ---------- */
+@media (min-width:1180px){
+  .chip-live{display:inline-flex}
+}
+@media (max-width:1024px){
+  .nav{display:none}
+  .stage{grid-template-columns:1fr;grid-template-areas:"head" "orb" "controls" "foot"}
+  .orb-col{min-height:300px}
+  .side{height:auto;max-height:none;position:static}
+  .side .panel-body{max-height:46vh}
+}
+@media (max-width:1024px){
+  .tabbar{
+    position:fixed;left:0;right:0;bottom:0;z-index:80;display:grid;grid-template-columns:repeat(5,1fr);
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom));gap:2px;
+    background:rgba(244,243,240,.94);border-top:1px solid var(--line);
+    backdrop-filter:saturate(1.2) blur(14px);-webkit-backdrop-filter:saturate(1.2) blur(14px);
+  }
+  .tabbar a{display:grid;justify-items:center;gap:5px;padding:7px 2px 5px;
+    font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .tabbar a span{width:5px;height:5px;border-radius:50%;background:var(--line);transition:.2s}
+  .tabbar a[aria-current="page"]{color:var(--ink)}
+  .tabbar a[aria-current="page"] span{background:var(--grad);box-shadow:0 0 0 3px rgba(255,62,138,.12)}
+  body{padding-bottom:66px}
+  footer.site{padding-bottom:18px}
+}
+@media (max-width:720px){
+  :root{--bar:64px}
+  .topbar{gap:10px;grid-template-columns:auto 1fr auto}
+  .top-actions .btn span.long{display:none}
+  .top-actions .btn{padding:10px 13px}
+  .strip{font-size:8.5px;letter-spacing:.08em;height:26px}
+  .strip .route{display:none}
+  .strip .sep{display:none}
+  .wrap{padding-top:14px}
+  .display{font-size:clamp(34px,9vw,46px)}
+  .eyebrow{margin-bottom:10px}
+  .stage-head .lede{margin-top:14px;font-size:13px;max-width:none}
+  .hint-mono{display:none}
+  .stage{padding:16px;gap:14px;grid-template-areas:"head" "orb" "controls" "foot"}
+  .orb-col{min-height:0;gap:10px;padding:4px 0 2px}
+  .orb-stage{width:clamp(168px,48vw,216px)}
+  .orb-stage .rings i:nth-child(3){display:none}
+  .wave{height:22px;min-width:0}
+  .status{gap:2px}
+  .status-text{font-size:10px}
+  .status-sub{font-size:11.5px}
+  .stage-controls{gap:10px;align-self:stretch}
+  .mic{height:52px;padding:0 18px 0 12px;font-size:9.5px;width:100%;justify-content:center}
+  .mic-note{display:none}
+  .mic-wrap{gap:10px}
+  .ctrl{padding:9px 10px;font-size:8.5px;flex:1 1 auto;justify-content:center;min-height:40px}
+  .ctrl-row{gap:6px}
+  /* typing sits directly under the mic on phones */
+  .stage-controls .alert{order:-3}
+  .stage-controls .mic-wrap{order:-2}
+  .composer{order:-1;margin-top:2px}
+  .composer input{font-size:16px;padding:8px 0}
+  .stage-foot{font-size:8px;gap:6px;padding-top:8px}
+  .stage-foot #footAsr, .stage-foot #footTts, .stage-foot .dotsep, .stage-foot .scrolltag{display:none}
+  .hist{grid-template-columns:1fr}
+  .hist .acts{justify-content:flex-start}
+  .side{height:auto}
+}
+</style>
+</head>
+<body data-state="idle">
+<div class="app">
+  <header class="topbar">
+    <a class="brand" href="#/app" aria-label="Remy Agent home">
+      <span class="glyph" aria-hidden="true"></span>
+      <span>Remy Agent</span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="https://remyagent.cc" class="nav-home" rel="noopener">Home</a>
+      <a href="#/app" data-nav="app">Voice</a>
+      <a href="#/history" data-nav="history">History</a>
+      <a href="#/settings" data-nav="settings">Settings</a>
+      <a href="#/about" data-nav="about">About</a>
+    </nav>
+    <div class="top-actions">
+      <div class="chip-live" id="chipLive" data-state="idle">
+        <span class="led" aria-hidden="true"></span><span id="chipText">Offline</span>
+      </div>
+      <button class="btn btn--ink" id="launchBtn" type="button">
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M6 0l1.6 4.4L12 6 7.6 7.6 6 12 4.4 7.6 0 6l4.4-1.6z"/></svg>
+        <span class="long">Launch</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="strip" aria-hidden="true">
+    <span class="pulse"></span>
+    <b>Live:</b>
+    <span class="strip-msg">Remy Voice v1 is here — real-time voice for NVIDIA-hosted models</span>
+    <span class="sep">/</span>
+    <span class="route" id="stripRoute">route: not configured</span>
+  </div>
+
+  <main class="view is-active" id="view-app">
+    <div class="wrap">
+      <div class="setup" id="setupBanner">
+        <div>
+          <b>Setup required</b>
+          Set your Worker URL in <code style="font-family:var(--mono);font-size:11px">config.js</code> (or here) to start talking. The NVIDIA key stays in Cloudflare — it is never part of this site.
+        </div>
+        <button class="btn btn--sm" type="button" data-goto="settings">Open settings</button>
+      </div>
+
+      <div class="voice-grid">
+      <div class="stage">
+        <div class="stage-head">
+          <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Unleash the power of</p>
+          <h1 class="display"><span class="mark">Thinking</span><span class="mark">Machines</span></h1>
+          <p class="lede">A real-time voice interface for NVIDIA-hosted models. Speak naturally, hear the answer out loud, interrupt any time.</p>
+          <div class="hint-mono">
+            <span><kbd>Space</kbd> mic</span>
+            <span><kbd>Esc</kbd> end</span>
+            <span>mic → ASR → LLM → TTS</span>
+          </div>
+        </div>
+
+        <div class="orb-col">
+          <div class="orb-stage" id="orbStage" data-state="idle">
+            <svg class="ticks" viewBox="0 0 200 200" aria-hidden="true">
+              <circle cx="100" cy="100" r="96" fill="none" stroke="rgba(11,11,11,.18)" stroke-width=".5" stroke-dasharray="1 6"/>
+              <circle cx="100" cy="4" r="2" fill="#FF3E8A"/>
+            </svg>
+            <div class="rings" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div class="orb" id="orbVisual">
+              <div class="face">
+                <div class="eyes" aria-hidden="true">
+                  <span class="eye"><i></i></span>
+                  <span class="eye"><i></i></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="wave" id="wave" aria-hidden="true"></div>
+
+          <div class="status" role="status" aria-live="polite">
+            <div class="status-text" id="statusText">Idle — start a conversation</div>
+            <div class="status-sub" id="statusSub">Microphone is off.</div>
+          </div>
+        </div>
+
+        <div class="stage-controls">
+          <div class="alert" id="alertBox" role="alert">
+            <div>
+              <strong id="alertTitle">Connection error</strong>
+              <span id="alertMsg"></span>
+            </div>
+            <button class="btn btn--sm retry" type="button" id="retryBtn">Retry</button>
+          </div>
+
+          <div class="mic-wrap">
+            <button class="mic" id="micBtn" type="button" data-live="false" aria-label="Start conversation">
+              <span class="ring" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg>
+              </span>
+              <span id="micLabel">Start talking</span>
+            </button>
+            <p class="mic-note" id="micNote">Mic opens only during a session.</p>
+          </div>
+
+          <div class="ctrl-row">
+            <button class="ctrl" id="interruptBtn" type="button" title="Interrupt the agent" aria-label="Interrupt the agent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none"/></svg>
+              <span class="lbl">Stop</span>
+            </button>
+            <button class="ctrl" id="muteBtn" type="button" aria-pressed="false" title="Mute microphone" aria-label="Mute microphone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 9v3a3 3 0 0 0 5.1 2.1M15 10.5V5a3 3 0 0 0-5.7-1.3"/><path d="M5 10v1a7 7 0 0 0 10.5 6.1M19 10v1a7 7 0 0 1-.9 3.4"/><path d="M12 18v4"/><path d="M4 3l16 18"/></svg>
+              <span class="lbl">Mute mic</span>
+            </button>
+            <button class="ctrl" id="speakerBtn" type="button" aria-pressed="false" title="Mute agent voice" aria-label="Mute agent voice">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16 8.5a5 5 0 0 1 0 7"/><path d="M19 6a9 9 0 0 1 0 12"/></svg>
+              <span class="lbl">Speaker</span>
+            </button>
+            <button class="ctrl" id="transcriptBtn" type="button" aria-pressed="true" title="Show or hide transcript" aria-label="Show or hide transcript">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 10h16M4 14h10M4 18h7"/></svg>
+              <span class="lbl">Transcript</span>
+            </button>
+            <button class="ctrl" id="newBtn" type="button" title="New conversation" aria-label="New conversation">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              <span class="lbl">New</span>
+            </button>
+            <button class="ctrl ctrl--danger" id="endBtn" type="button" title="End conversation" aria-label="End conversation">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              <span class="lbl">End</span>
+            </button>
+          </div>
+
+          <form class="composer" id="composer" autocomplete="off">
+            <input id="chatInput" type="text" name="message"
+                   placeholder="Or type a message…"
+                   aria-label="Type a message to the assistant"
+                   maxlength="2000" enterkeyhint="send" />
+            <button class="send" id="sendBtn" type="submit" aria-label="Send message">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></svg>
+            </button>
+          </form>
+        </div>
+
+        <div class="stage-foot">
+          <span id="footModel">model —</span>
+          <span class="dotsep"></span>
+          <span id="footAsr">asr —</span>
+          <span class="dotsep"></span>
+          <span id="footTts">tts —</span>
+          <span class="grow"></span>
+          <span class="scrolltag">Scroll</span>
+        </div>
+      </div>
+
+      <aside class="side" id="transcriptSide" aria-label="Transcript">
+        <div class="panel">
+          <div class="panel-head">
+            <span>Live transcript</span>
+            <span class="count" id="msgCount">0 turns</span>
+          </div>
+          <div class="panel-body" id="transcriptBody" role="log" aria-live="polite" aria-relevant="additions text">
+            <div class="transcript-empty" id="transcriptEmpty">
+              <span class="k">Nothing yet</span>
+              Press start and speak. Your words and the agent's reply appear here as they happen.
+            </div>
+          </div>
+          <div class="panel-foot">
+            <span id="footSession">session 00:00</span>
+            <span style="margin-left:auto" id="footTurns">idle</span>
+          </div>
+        </div>
+      </aside>
+      </div>
+    </div>
+  </main>
+
+  <section class="view" id="view-history" hidden>
+    <div class="wrap">
+      <div class="page-head">
+        <div class="kicker">Archive</div>
+        <h1>Conversation history</h1>
+        <p>Stored on this device only. Nothing is uploaded, and you can wipe it at any time.</p>
+      </div>
+      <div class="row row--split" style="margin-bottom:16px">
+        <div class="row">
+          <span class="badge" id="histCount">0 conversations</span>
+          <span class="badge" id="histStoreState">storage: local</span>
+        </div>
+        <button class="btn btn--sm btn--ghost" type="button" id="histClearBtn">Delete all</button>
+      </div>
+      <div class="hist-list" id="histList"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-settings" hidden>
+    <div class="wrap">
+      <div class="page-head">
+        <div class="kicker">Configuration</div>
+        <h1>Settings</h1>
+        <p>Connection, agent personality, audio devices and privacy — saved to this browser.</p>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h2><span class="num">01</span> Connection</h2>
+          <p>This site is static (GitHub Pages), so requests go through your own proxy. The API key lives in the proxy, never in this page.</p>
+          <div class="field">
+            <label for="fProxy">Proxy base URL</label>
+            <input class="input" id="fProxy" type="url" placeholder="https://remy-proxy.you.workers.dev" autocomplete="off" spellcheck="false" />
+            <span class="help">Pre-filled from <code class="inline">config.js</code> at deploy time. Override here only for local testing; the value is stored in this browser. Leave blank on localhost to use the bundled dev server at <code class="inline">/api</code>.</span>
+          </div>
+          <div class="field">
+            <label for="fToken">App token <span style="opacity:.6">(optional)</span></label>
+            <input class="input" id="fToken" type="password" placeholder="shared secret sent as x-app-token" autocomplete="off" />
+            <span class="help">Lets your proxy refuse strangers after you publish the page. Stored in session storage only.</span>
+          </div>
+          <div class="field">
+            <label for="fModel">Model ID</label>
+            <div class="row">
+              <input class="input" id="fModel" list="modelList" placeholder="nvidia/llama-3.1-nemotron-70b-instruct" style="flex:1;min-width:180px" />
+              <button class="btn btn--sm" type="button" id="fetchModelsBtn">Fetch list</button>
+            </div>
+            <datalist id="modelList"></datalist>
+            <span class="help">Any chat-completions model available to your NVIDIA account. The row below shows what the proxy reports.</span>
+          </div>
+          <div class="row">
+            <button class="btn btn--sm" type="button" id="testConnBtn">Test connection</button>
+            <span class="badge" id="connBadge">untested</span>
+            <span class="badge" id="proxySource">not configured</span>
+          </div>
+          <div class="note">Temporary one-off key? Use the local dev server (<code class="inline">npm start</code>) or your Worker's secret — do not paste keys into this page on a public host.</div>
+        </div>
+
+        <div class="card">
+          <h2><span class="num">02</span> Agent</h2>
+          <div class="field">
+            <label for="fName">Agent name</label>
+            <input class="input" id="fName" type="text" maxlength="40" placeholder="Remy" />
+          </div>
+          <div class="field">
+            <label for="fPrompt">System instructions</label>
+            <textarea class="textarea" id="fPrompt" rows="7" spellcheck="false"></textarea>
+            <span class="help">Sent as the system message on every turn. Spoken responses are kept short by default.</span>
+          </div>
+          <div class="row">
+            <div class="field" style="flex:1;min-width:150px">
+              <label for="fStyle">Response style</label>
+              <select class="select" id="fStyle">
+                <option value="concise">Concise — one or two sentences</option>
+                <option value="balanced">Balanced — short paragraphs</option>
+                <option value="detailed">Detailed — explain fully</option>
+              </select>
+            </div>
+            <div class="field" style="flex:1;min-width:150px">
+              <label for="fLang">Language</label>
+              <select class="select" id="fLang"></select>
+            </div>
+          </div>
+          <div class="row">
+            <button class="btn btn--sm" type="button" id="resetPromptBtn">Reset to default</button>
+            <button class="btn btn--sm" type="button" id="voiceTestBtn">Test voice</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="num">03</span> Audio</h2>
+          <div class="field">
+            <label for="fInput">Microphone</label>
+            <select class="select" id="fInput"><option value="">System default</option></select>
+          </div>
+          <div class="field">
+            <label for="fOutput">Speech output voice</label>
+            <select class="select" id="fOutput"><option value="">System default</option></select>
+          </div>
+          <div class="field">
+            <label>Microphone test</label>
+            <div class="meter" aria-hidden="true"><i id="micMeter"></i></div>
+            <div class="row">
+              <button class="btn btn--sm" type="button" id="micTestBtn">Test mic</button>
+              <span class="badge" id="micTestBadge">idle</span>
+            </div>
+            <span class="help">Bars move with live input level. Permission is requested when you test or start a conversation.</span>
+          </div>
+          <div class="row">
+            <div class="field" style="flex:1">
+              <label for="fRate">Speech rate <span id="rateVal" style="opacity:.6">1.0×</span></label>
+              <input type="range" id="fRate" min="0.7" max="1.4" step="0.05" value="1" style="width:100%;accent-color:#FF3E8A" />
+            </div>
+            <div class="field" style="flex:1">
+              <label for="fPitch">Pitch <span id="pitchVal" style="opacity:.6">1.0</span></label>
+              <input type="range" id="fPitch" min="0.6" max="1.4" step="0.05" value="1" style="width:100%;accent-color:#FF8A3C" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="num">04</span> Privacy &amp; storage</h2>
+          <label class="switch">
+            <input type="checkbox" id="fShowTranscript" checked />
+            <span class="txt"><b>Show transcript</b><span>Display the live transcript beside the orb.</span></span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="fStoreHistory" checked />
+            <span class="txt"><b>Save conversations on this device</b><span>Transcripts only — audio is never recorded or stored. Turn off to keep sessions ephemeral.</span></span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="fAutoSpeak" checked />
+            <span class="txt"><b>Speak responses automatically</b><span>Uses your browser's speech synthesis engine.</span></span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="fBargeIn" checked />
+            <span class="txt"><b>Barge-in</b><span>Cut the agent short the moment you start talking again.</span></span>
+          </label>
+          <div class="row">
+            <button class="btn btn--sm btn--ghost" type="button" id="wipeBtn">Clear stored data</button>
+          </div>
+          <dl class="kv">
+            <dt>Audio</dt><dd>Processed in the browser; not saved.</dd>
+            <dt>Transcripts</dt><dd>localStorage on this device, if enabled.</dd>
+            <dt>Transport</dt><dd>HTTPS to your own proxy.</dd>
+          </dl>
+        </div>
+
+        <div class="card">
+          <h2><span class="num">05</span> Runtime</h2>
+          <dl class="kv">
+            <dt>Host</dt><dd id="rtHost">—</dd>
+            <dt>Proxy</dt><dd id="rtProxy">—</dd>
+            <dt>ASR</dt><dd id="rtAsr">—</dd>
+            <dt>TTS</dt><dd id="rtTts">—</dd>
+            <dt>Model</dt><dd id="rtModel">—</dd>
+            <dt>Storage</dt><dd id="rtStorage">—</dd>
+          </dl>
+          <p class="note" id="rtNote">Browser speech recognition handles transcription; the NVIDIA model handles reasoning and wording; your browser speaks the reply.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-about" hidden>
+    <div class="wrap">
+      <div class="page-head">
+        <div class="kicker">About</div>
+        <h1>How this works, and what it stores.</h1>
+        <p>A static voice client in the Remy Agent design language, powered by NVIDIA-hosted inference through a proxy you control.</p>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h2><span class="num">01</span> Pipeline</h2>
+          <p><strong>Microphone</strong> → browser speech recognition (ASR) → <strong>your proxy</strong> → NVIDIA chat-completions model → spoken reply through the browser's speech synthesis engine (TTS).</p>
+          <p>Turn detection comes from the recognizer's own segmentation plus an amplitude gate on the mic stream. Interrupting the agent cancels playback and the in-flight request immediately.</p>
+          <dl class="kv">
+            <dt>Model</dt><dd>Yours to choose — any chat-completions endpoint on your NVIDIA account.</dd>
+            <dt>Audio</dt><dd>Never sent to the LLM, never written to disk.</dd>
+            <dt>Limitation</dt><dd>Native speech-to-speech is not used: speech recognition and synthesis are browser-native, so the model sees text.</dd>
+          </dl>
+        </div>
+        <div class="card">
+          <h2><span class="num">02</span> What is stored</h2>
+          <p>Settings live in <code class="inline">localStorage</code>. Transcripts are stored locally only when you leave "Save conversations" on, and you can delete them individually or all at once.</p>
+          <p>Your NVIDIA API key is <strong>never</strong> part of this page, its bundle, or this repository. It sits in your proxy's environment. If you use the optional app token, it is held in <code class="inline">sessionStorage</code> and disappears when the tab closes.</p>
+          <p>Your proxy and NVIDIA process the conversation text under their own retention policies — this app cannot make claims about those.</p>
+        </div>
+        <div class="card">
+          <h2><span class="num">03</span> Accessibility</h2>
+          <p>Every control is a real button with an accessible name and visible focus. Conversation state is announced through an <code class="inline">aria-live</code> status region and mirrored in the header chip. Reduced-motion preferences disable orb animation. Touch targets stay above 44px on mobile.</p>
+        </div>
+        <div class="card">
+          <h2><span class="num">04</span> Deploying</h2>
+          <p>Static files only — no build step. Push <code class="inline">index.html</code>, <code class="inline">app.js</code> and <code class="inline">.nojekyll</code> to a repo, enable GitHub Pages on the branch root, then paste your proxy URL in Settings.</p>
+          <p>The same repo ships <code class="inline">worker.js</code> (Cloudflare Worker) and a zero-dependency <code class="inline">server.mjs</code> for local testing.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<nav class="tabbar" aria-label="Mobile">
+  <a href="https://remyagent.cc" rel="noopener"><span aria-hidden="true"></span>Home</a>
+  <a href="#/app" data-nav="app"><span aria-hidden="true"></span>Voice</a>
+  <a href="#/history" data-nav="history"><span aria-hidden="true"></span>History</a>
+  <a href="#/settings" data-nav="settings"><span aria-hidden="true"></span>Settings</a>
+  <a href="#/about" data-nav="about"><span aria-hidden="true"></span>About</a>
+</nav>
+
+<div class="toast-host" id="toastHost" aria-live="polite"></div>
+
+<footer class="site">
+  <span>© <span id="year"></span> Remy Agent</span>
+  <span class="dotsep" style="width:3px;height:3px;border-radius:50%;background:var(--line)"></span>
+  <span>NVIDIA Build inference</span>
+  <span class="grow"></span>
+  <span id="footVersion">v1.0 · static</span>
+</footer>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
