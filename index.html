@@ -3,10 +3,118 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>REMY AGENT — Real-Time Voice Interface</title>
-<meta name="description" content="REMY AGENT — a real-time voice interface for NVIDIA-hosted models. Speak, listen, interrupt." />
+<!-- Primary SEO -->
+<title>Remy Agent – Free Real-Time AI Voice Chat Assistant</title>
+<meta name="description" content="Talk naturally with AI using Remy Agent. Experience real-time voice conversations, multilingual support, and multiple AI models in one voice chat assistant." />
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+<link rel="canonical" href="https://chat.remyagent.cc/" />
+<meta name="author" content="DotcomAI" />
+<meta name="publisher" content="DotcomAI" />
+<meta name="application-name" content="Remy Agent" />
 <meta name="theme-color" content="#F4F3F0" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0B0B'/%3E%3Crect x='8' y='8' width='16' height='16' rx='5' fill='none' stroke='%23FF3E8A' stroke-width='2'/%3E%3Ccircle cx='13' cy='16' r='1.8' fill='%23F4F3F0'/%3E%3Ccircle cx='19' cy='16' r='1.8' fill='%23F4F3F0'/%3E%3C/svg%3E" />
+<meta name="color-scheme" content="light" />
+
+<!-- Icons -->
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Remy Agent" />
+<meta property="og:title" content="Remy Agent – Real-Time AI Voice Chat" />
+<meta property="og:description" content="Have natural real-time voice conversations with AI using multiple models." />
+<meta property="og:url" content="https://chat.remyagent.cc/" />
+<meta property="og:image" content="https://chat.remyagent.cc/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Remy Agent — an orange-to-magenta orb with two glowing eyes on a paper-white grid." />
+<meta property="og:locale" content="en_US" />
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Remy Agent – Real-Time AI Voice Chat" />
+<meta name="twitter:description" content="Natural AI voice conversations, multiple models, and multilingual support." />
+<meta name="twitter:image" content="https://chat.remyagent.cc/og-image.png" />
+<meta name="twitter:image:alt" content="Remy Agent voice assistant orb logo." />
+
+<!-- Structured data: Organization, WebSite, WebPage, SoftwareApplication, FAQPage -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://remyagent.cc/#organization",
+      "name": "DotcomAI",
+      "alternateName": "Dotcom AI",
+      "url": "https://remyagent.cc/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://chat.remyagent.cc/icon-512.png",
+        "width": 512,
+        "height": 512
+      },
+      "parentOrganization": {
+        "@type": "Organization",
+        "name": "Dotcom One"
+      }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://remyagent.cc/#website",
+      "name": "Remy Agent",
+      "url": "https://remyagent.cc/",
+      "inLanguage": "en",
+      "publisher": { "@id": "https://remyagent.cc/#organization" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://chat.remyagent.cc/#app",
+      "name": "Remy Agent",
+      "url": "https://chat.remyagent.cc/",
+      "description": "A real-time AI voice chat agent for natural conversations with multiple AI models.",
+      "applicationCategory": "CommunicationApplication",
+      "operatingSystem": "Web",
+      "browserRequirements": "Requires JavaScript. Speech input needs a browser with the Web Speech API (Chrome or Edge).",
+      "inLanguage": "en",
+      "publisher": { "@id": "https://remyagent.cc/#organization" },
+      "featureList": [
+        "Real-time voice conversations",
+        "Written chat with the same assistant",
+        "Multiple AI models",
+        "Multilingual speech input and output"
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://chat.remyagent.cc/#webpage",
+      "url": "https://chat.remyagent.cc/",
+      "name": "Remy Agent – Free Real-Time AI Voice Chat Assistant",
+      "description": "Talk naturally with AI using Remy Agent. Experience real-time voice conversations, multilingual support, and multiple AI models in one voice chat assistant.",
+      "isPartOf": { "@id": "https://remyagent.cc/#website" },
+      "about": { "@id": "https://chat.remyagent.cc/#app" },
+      "primaryImageOfPage": { "@type": "ImageObject", "url": "https://chat.remyagent.cc/og-image.png", "width": 1200, "height": 630 },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://chat.remyagent.cc/#faq",
+      "mainEntity": [
+        { "@type": "Question", "name": "What is Remy Agent?", "acceptedAnswer": { "@type": "Answer", "text": "Remy Agent is a real-time AI voice assistant built by DotcomAI. You speak or type, and an AI model answers — spoken aloud and shown as a live transcript." } },
+        { "@type": "Question", "name": "Is Remy Agent free to use?", "acceptedAnswer": { "@type": "Answer", "text": "The web app itself is free to use. Model access depends on the inference account behind this deployment and its rate limits and quotas." } },
+        { "@type": "Question", "name": "Can I choose different AI models?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Any chat-completions model available to this deployment can be selected in Settings, and the list can be fetched live." } },
+        { "@type": "Question", "name": "Does Remy Agent support multiple languages?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Choose a language in Settings to drive speech recognition and spoken output. The browser supplies the voices, so available languages depend on your device, and the model replies in the language you use." } },
+        { "@type": "Question", "name": "Can I use Remy Agent on mobile?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The interface adapts to phones and tablets. Typing works in every browser; voice input needs a browser with the Web Speech API, such as Chrome or Edge on Android." } },
+        { "@type": "Question", "name": "Does Remy Agent store voice conversations?", "acceptedAnswer": { "@type": "Answer", "text": "Audio is never recorded or uploaded. Transcripts are kept only in your own browser storage when conversation history is enabled, and you can delete them at any time." } },
+        { "@type": "Question", "name": "How do I start a conversation?", "acceptedAnswer": { "@type": "Answer", "text": "Press Start talking and allow microphone access, or type a message in the composer. Replying aloud can be turned off in Settings." } }
+      ]
+    }
+  ]
+}
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -81,6 +189,7 @@ h1,h2,h3,h4,p{margin:0}
 .brand .glyph::before,.brand .glyph::after{content:"";width:2px;height:2px;background:var(--ink);border-radius:50%;position:absolute;top:50%;transform:translateY(-50%)}
 .brand .glyph::before{left:4px}.brand .glyph::after{right:4px}
 .brand:hover .glyph{border-color:var(--pink)}
+.brand-logo{width:22px;height:22px;border-radius:6px;display:block;flex:none}
 .nav{display:flex;align-items:center;gap:clamp(10px,2vw,26px);justify-content:flex-start;min-width:0;overflow:hidden}
 .nav a{
   font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;
@@ -497,6 +606,19 @@ code.inline{font-family:var(--mono);font-size:11.5px;background:var(--paper-3);p
 .hist .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .empty{font-size:13px;color:var(--muted);padding:26px;border:1px dashed var(--line);text-align:center}
 
+/* FAQ */
+.faq{margin-top:clamp(14px,2vw,22px);border:1px solid var(--line);background:var(--paper);padding:clamp(16px,2vw,24px)}
+.faq h2{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.faq h2 .num{color:var(--muted);font-weight:400}
+.faq details{border-top:1px solid var(--line-soft);padding:13px 0}
+.faq details:first-of-type{border-top:0;padding-top:10px}
+.faq summary{cursor:pointer;font-size:13.5px;font-weight:500;list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:center}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--mono);color:var(--muted);font-size:14px;line-height:1}
+.faq details[open] summary::after{content:"\2013"}
+.faq p{margin-top:9px;font-size:12.5px;color:var(--muted);line-height:1.68;max-width:78ch}
+.faq a{text-decoration:underline;text-underline-offset:2px}
+
 footer.site{border-top:1px solid var(--line);padding:16px var(--pad);display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 footer.site .grow{flex:1}
 
@@ -596,7 +718,7 @@ body:not(.is-owner) [data-owner-only]{display:none !important}
 <div class="app">
   <header class="topbar">
     <a class="brand" href="#/app" aria-label="Remy Agent home">
-      <span class="glyph" aria-hidden="true"></span>
+      <img class="brand-logo" src="favicon.svg" alt="" width="22" height="22" decoding="async" />
       <span>Remy Agent</span>
     </a>
     <nav class="nav" aria-label="Primary">
@@ -786,7 +908,7 @@ body:not(.is-owner) [data-owner-only]{display:none !important}
       <div class="page-head">
         <div class="kicker">Configuration</div>
         <h1>Settings</h1>
-        <p>Connection, agent personality, audio devices and privacy — saved to this browser.</p>
+        <p>Agent personality, audio devices and privacy — saved to this browser.</p>
       </div>
       <div class="grid2">
         <div class="card" id="connectionCard" data-owner-only>
@@ -929,8 +1051,8 @@ body:not(.is-owner) [data-owner-only]{display:none !important}
     <div class="wrap">
       <div class="page-head">
         <div class="kicker">About</div>
-        <h1>How this works, and what it stores.</h1>
-        <p>A static voice client in the Remy Agent design language, powered by NVIDIA-hosted inference through a proxy you control.</p>
+        <h1>About Remy Agent</h1>
+        <p>A real-time AI voice and chat assistant by DotcomAI, powered by NVIDIA-hosted inference through a proxy you control. Here is how it works and what it stores.</p>
       </div>
       <div class="grid2">
         <div class="card">
@@ -959,6 +1081,38 @@ body:not(.is-owner) [data-owner-only]{display:none !important}
           <p>The same repo ships <code class="inline">worker.js</code> (Cloudflare Worker) and a zero-dependency <code class="inline">server.mjs</code> for local testing.</p>
         </div>
       </div>
+
+      <section class="faq" id="faq" aria-labelledby="faqTitle">
+        <h2 id="faqTitle"><span class="num">05</span> Frequently asked questions</h2>
+        <details open>
+          <summary>What is Remy Agent?</summary>
+          <p>Remy Agent is a real-time AI voice assistant built by DotcomAI. You speak or type, and an AI model answers — spoken aloud and shown as a live transcript.</p>
+        </details>
+        <details>
+          <summary>Is Remy Agent free to use?</summary>
+          <p>The web app itself is free to use. Model access depends on the inference account behind this deployment, including its rate limits and quotas.</p>
+        </details>
+        <details>
+          <summary>Can I choose different AI models?</summary>
+          <p>Yes. Any chat-completions model available to this deployment can be selected in <a href="#/settings">Settings</a>, and the list can be fetched live.</p>
+        </details>
+        <details>
+          <summary>Does Remy Agent support multiple languages?</summary>
+          <p>Yes. Choose a language in Settings to drive speech recognition and spoken output. The browser supplies the voices, so available languages depend on your device, and the model replies in the language you use.</p>
+        </details>
+        <details>
+          <summary>Can I use Remy Agent on mobile?</summary>
+          <p>Yes. The interface adapts to phones and tablets. Typing works in every browser; voice input needs a browser with the Web Speech API, such as Chrome or Edge on Android.</p>
+        </details>
+        <details>
+          <summary>Does Remy Agent store voice conversations?</summary>
+          <p>Audio is never recorded or uploaded. Transcripts are kept only in your own browser storage when conversation history is enabled, and you can delete them at any time in <a href="#/settings">Settings</a>.</p>
+        </details>
+        <details>
+          <summary>How do I start a conversation?</summary>
+          <p>Press <strong>Start talking</strong> and allow microphone access, or type a message in the composer. Replying aloud can be turned off in Settings.</p>
+        </details>
+      </section>
     </div>
   </section>
 

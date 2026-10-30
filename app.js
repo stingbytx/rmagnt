@@ -28,6 +28,19 @@
   })();
   const CONFIG_TOKEN = String(CONFIG.appToken || '').trim();
 
+  /* The deployed Worker. This is the last-resort fallback, so a visitor is
+     never asked to configure anything: if config.js is missing or still holds
+     the placeholder, requests still go to the right place.
+     Change this one line if the Worker moves. */
+  const BUILTIN_PROXY = 'https://api.remyagent.cc';
+
+  function normalizeBase(raw) {
+    return String(raw || '').trim()
+      .replace(/\/+$/, '')
+      .replace(/\/chat\/completions$/, '')
+      .replace(/\/models$/, '');
+  }
+
   /* Owner mode: reveals the Connection card, setup banner and proxy controls.
      Visitors only ever get the voice/chat surface. Enable with ?owner=1
      (persists on this browser), disable with ?owner=0. Local dev is owner. */
@@ -151,12 +164,12 @@
   }
 
   function apiBase() {
-    const raw = String(settings.proxyUrl || '').trim();
-    if (raw) return raw.replace(/\/+$/, '').replace(/\/chat\/completions$/, '').replace(/\/models$/, '');
+    const saved = normalizeBase(settings.proxyUrl);
+    if (saved) return saved;
     if (CONFIG_PROXY) return CONFIG_PROXY;
     const h = location.hostname;
     if (h === 'localhost' || h === '127.0.0.1' || h === '::1' || location.protocol === 'file:') return '/api';
-    return '';
+    return normalizeBase(BUILTIN_PROXY) || '';
   }
 
   function isConfigured() {
@@ -1503,6 +1516,49 @@
     }
   };
 
+  /* ---------- per-view SEO ---------- */
+  const SITE_URL = 'https://chat.remyagent.cc/';
+  const SEO = {
+    app: {
+      title: 'Remy Agent – Free Real-Time AI Voice Chat Assistant',
+      description: 'Talk naturally with AI using Remy Agent. Experience real-time voice conversations, multilingual support, and multiple AI models in one voice chat assistant.',
+      robots: 'index,follow,max-image-preview:large,max-snippet:-1'
+    },
+    history: {
+      title: 'Conversation history – Remy Agent',
+      description: 'Reopen, rename or delete the Remy Agent conversations saved in your own browser.',
+      robots: 'noindex,follow'
+    },
+    settings: {
+      title: 'Settings – Remy Agent',
+      description: 'Set the agent name and system prompt, pick a voice and microphone, and control what Remy Agent stores.',
+      robots: 'noindex,follow'
+    },
+    about: {
+      title: 'About Remy Agent – Built by DotcomAI',
+      description: 'Discover Remy Agent, a real-time AI voice chat platform by DotcomAI, built to make natural AI conversations accessible through multiple models.',
+      robots: 'index,follow,max-image-preview:large'
+    }
+  };
+
+  function setMeta(selector, value) {
+    const el = document.head.querySelector(selector);
+    if (el) el.setAttribute('content', value);
+  }
+
+  function applySeo(view) {
+    const meta = SEO[view] || SEO.app;
+    document.title = meta.title;
+    setMeta('meta[name="description"]', meta.description);
+    setMeta('meta[name="robots"]', meta.robots);
+    setMeta('meta[property="og:title"]', meta.title);
+    setMeta('meta[property="og:description"]', meta.description);
+    setMeta('meta[name="twitter:title"]', meta.title);
+    setMeta('meta[name="twitter:description"]', meta.description);
+    const canonical = document.head.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.setAttribute('href', SITE_URL);
+  }
+
   /* ---------- views / router ---------- */
   const Router = {
     views: ['app', 'history', 'settings', 'about'],
@@ -1518,8 +1574,7 @@
         if (a.dataset.nav === name) a.setAttribute('aria-current', 'page');
         else a.removeAttribute('aria-current');
       });
-      const titles = { app: 'Voice', history: 'History', settings: 'Settings', about: 'About' };
-      document.title = 'REMY AGENT — ' + (titles[name] || 'Voice');
+      applySeo(name);
       if (name === 'settings') { UI.syncSettingsForm(); UI.fillDevices(); syncRuntimePanel(); }
       if (name === 'history') History.render();
       window.scrollTo(0, 0);

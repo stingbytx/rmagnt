@@ -1,0 +1,13 @@
+# Remy Agent — https://chat.remyagent.cc/
+# The app uses hash routing (#/app, #/settings), so there are no separate
+# crawlable paths to allow or block. Assets must stay crawlable so the page
+# can render for search engines.
+
+User-agent: *
+Allow: /
+Allow: /assets/
+
+# No private areas are served from this origin; everything sensitive lives in
+# the browser. Nothing else to disallow.
+
+Sitemap: https://chat.remyagent.cc/sitemap.xml

@@ -12,8 +12,9 @@
    connect it in Cloudflare, then commit and redeploy Pages.
    ============================================================ */
 window.REMY_CONFIG = {
-  // e.g. "https://api.yourdomain.com" — your Worker's custom domain
-  proxyUrl: 'https://api.example.com',
+  // Your Worker's custom domain. app.js also has this as a built-in
+  // fallback, so visitors connect even if this file is stale.
+  proxyUrl: 'https://api.remyagent.cc',
 
   // Optional. Only useful if your Worker checks CLIENT_TOKEN.
   // Anything in this file is public, so treat it as a door code,
